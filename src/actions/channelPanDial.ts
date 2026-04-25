@@ -25,6 +25,7 @@ export class ChannelPanDial extends SingletonAction<Settings> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private dialActions  = new Map<string, any>();
   private dialBusy     = new Map<string, number>();
+  private dialRecvPorts = new Map<string, number>(); // action id → registered recvPort
 
   override async onWillAppear(ev: WillAppearEvent<Settings>): Promise<void> {
     const { host, sendPort, recvPort } = conn(ev.payload.settings);
@@ -33,6 +34,7 @@ export class ChannelPanDial extends SingletonAction<Settings> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (ev.action as any).setFeedbackLayout('layouts/pan-dial.json');
     initBusTracking(recvPort);
+    this.dialRecvPorts.set(ev.action.id, recvPort);
     this.subscribe(ev.action.id, recvPort, host, sendPort, channel, ev.payload.settings.titleLabel || '', ev.payload.settings.titleFont || 'Arial', ev.payload.settings.titleSize || 12, ev.payload.settings.titleColor || '#ffffff', ev.payload.settings.gaugeFill || '#FF9900', ev.payload.settings.gaugeBg || '#2a1a0a', ev.payload.settings.lcdBg || '#000000');
     ensureBus(host, sendPort, recvPort, bus);
     sendOsc(host, sendPort, '/1/refresh', 1.0);
@@ -41,15 +43,19 @@ export class ChannelPanDial extends SingletonAction<Settings> {
 
   override onWillDisappear(ev: WillDisappearEvent<Settings>): void {
     this.dialActions.delete(ev.action.id);
-    this.unsubscribe(ev.action.id, conn(ev.payload.settings).recvPort);
+    const registeredPort = this.dialRecvPorts.get(ev.action.id) ?? conn(ev.payload.settings).recvPort;
+    this.dialRecvPorts.delete(ev.action.id);
+    this.unsubscribe(ev.action.id, registeredPort);
   }
 
   override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<Settings>): Promise<void> {
     const { host, sendPort, recvPort } = conn(ev.payload.settings);
     const { bus = 'Input', channel = 1 } = ev.payload.settings;
     this.dialActions.set(ev.action.id, ev.action);
-    this.unsubscribe(ev.action.id, recvPort);
+    const registeredPort = this.dialRecvPorts.get(ev.action.id) ?? recvPort;
+    this.unsubscribe(ev.action.id, registeredPort);
     initBusTracking(recvPort);
+    this.dialRecvPorts.set(ev.action.id, recvPort);
     this.subscribe(ev.action.id, recvPort, host, sendPort, channel, ev.payload.settings.titleLabel || '', ev.payload.settings.titleFont || 'Arial', ev.payload.settings.titleSize || 12, ev.payload.settings.titleColor || '#ffffff', ev.payload.settings.gaugeFill || '#FF9900', ev.payload.settings.gaugeBg || '#2a1a0a', ev.payload.settings.lcdBg || '#000000');
     ensureBus(host, sendPort, recvPort, bus);
     sendOsc(host, sendPort, '/1/refresh', 1.0);
@@ -104,9 +110,8 @@ export class ChannelPanDial extends SingletonAction<Settings> {
     const pan = panValues.get(key) ?? 0.5;
     const pct = Math.round(pan * 100);
     dialAction.setFeedback({
-      titlePx: makeDialTitleImage(titleLabel || `Ch ${channel} Pan`, titleFont, titleSize, titleColor, 120, 51, lcdBg),
-      value:   makeValueImage(panToDisplay(pan), lcdBg),
-      gauge:   makeGaugeSvg(pct, gaugeFill, gaugeBg, true, lcdBg),
+      titlePx: makeDialTitleImage(titleLabel || `Ch ${channel} Pan`, titleFont, titleSize, titleColor, 200, 20, lcdBg),
+      gauge:   makeGaugeSvg(pct, gaugeFill, gaugeBg, true, lcdBg, panToDisplay(pan)),
     });
   }
 

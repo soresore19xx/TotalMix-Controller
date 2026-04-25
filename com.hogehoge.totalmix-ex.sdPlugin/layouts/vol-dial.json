@@ -4,17 +4,12 @@
     {
       "key": "titlePx",
       "type": "pixmap",
-      "rect": [0, 1, 120, 51]
-    },
-    {
-      "key": "value",
-      "type": "pixmap",
-      "rect": [120, 1, 80, 51]
+      "rect": [0, 1, 200, 20]
     },
     {
       "key": "gauge",
       "type": "pixmap",
-      "rect": [0, 52, 200, 47]
+      "rect": [0, 21, 200, 78]
     }
   ]
 }

@@ -41,6 +41,7 @@ export class ChannelVolumeDial extends SingletonAction<Settings> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private dialActions   = new Map<string, any>();
   private dialSettings  = new Map<string, { host: string; sendPort: number; channel: number; titleLabel: string; titleFont: string; titleSize: number; titleColor: string; gaugeFill: string; gaugeBg: string; lcdBg: string }>();
+  private dialRecvPorts = new Map<string, number>(); // action id → registered recvPort
   private muteStates    = new Map<string, boolean>(); // true = armed (muted)
   private dialBusy      = new Map<string, number>();  // key → timestamp of last dial action
   private rampTargets   = new Map<string, number>();  // key → target fader value
@@ -55,6 +56,7 @@ export class ChannelVolumeDial extends SingletonAction<Settings> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (ev.action as any).setFeedbackLayout('layouts/vol-dial.json');
     initBusTracking(recvPort);
+    this.dialRecvPorts.set(ev.action.id, recvPort);
     this.subscribe(ev.action.id, recvPort, host, sendPort, channel);
     ensureBus(host, sendPort, recvPort, bus);
     sendOsc(host, sendPort, '/1/refresh', 1.0);
@@ -64,7 +66,9 @@ export class ChannelVolumeDial extends SingletonAction<Settings> {
   override onWillDisappear(ev: WillDisappearEvent<Settings>): void {
     this.dialActions.delete(ev.action.id);
     this.dialSettings.delete(ev.action.id);
-    this.unsubscribe(ev.action.id, conn(ev.payload.settings).recvPort);
+    const registeredPort = this.dialRecvPorts.get(ev.action.id) ?? conn(ev.payload.settings).recvPort;
+    this.dialRecvPorts.delete(ev.action.id);
+    this.unsubscribe(ev.action.id, registeredPort);
   }
 
   override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<Settings>): Promise<void> {
@@ -72,8 +76,10 @@ export class ChannelVolumeDial extends SingletonAction<Settings> {
     const { bus = 'Input', channel = 1 } = ev.payload.settings;
     this.dialActions.set(ev.action.id, ev.action);
     this.dialSettings.set(ev.action.id, { host, sendPort, channel, titleLabel: ev.payload.settings.titleLabel || '', titleFont: ev.payload.settings.titleFont || 'Arial', titleSize: ev.payload.settings.titleSize || 12, titleColor: ev.payload.settings.titleColor || '#ffffff', gaugeFill: ev.payload.settings.gaugeFill || '#0099FF', gaugeBg: ev.payload.settings.gaugeBg || '#1a2a3a', lcdBg: ev.payload.settings.lcdBg || '#000000' });
-    this.unsubscribe(ev.action.id, recvPort);
+    const registeredPort = this.dialRecvPorts.get(ev.action.id) ?? recvPort;
+    this.unsubscribe(ev.action.id, registeredPort);
     initBusTracking(recvPort);
+    this.dialRecvPorts.set(ev.action.id, recvPort);
     this.subscribe(ev.action.id, recvPort, host, sendPort, channel);
     ensureBus(host, sendPort, recvPort, bus);
     sendOsc(host, sendPort, '/1/refresh', 1.0);
@@ -166,9 +172,8 @@ export class ChannelVolumeDial extends SingletonAction<Settings> {
     const vol   = faderValues.get(faderKey(host, sendPort, channel)) ?? 0.75;
     const pct   = muted ? 0 : Math.round(vol * 100);
     dialAction.setFeedback({
-      titlePx: makeDialTitleImage(titleLabel || `Ch ${channel}`, titleFont, titleSize, titleColor, 120, 51, lcdBg),
-      value:   makeValueImage(muted ? '[MUTED]' : faderToDb(vol), lcdBg),
-      gauge:   makeGaugeSvg(muted ? 0 : pct, gaugeFill, gaugeBg, false, lcdBg),
+      titlePx: makeDialTitleImage(titleLabel || `Ch ${channel}`, titleFont, titleSize, titleColor, 200, 20, lcdBg),
+      gauge:   makeGaugeSvg(muted ? 0 : pct, gaugeFill, gaugeBg, false, lcdBg, muted ? '[MUTED]' : faderToDb(vol)),
     });
   }
 
