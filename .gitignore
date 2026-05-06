@@ -2,3 +2,6 @@ node_modules/
 com.hogehoge.totalmix-ex.sdPlugin/bin/index.js.map
 com.hogehoge.totalmix-ex.sdPlugin/logs/
 conversation-*.txt
+
+# Claude Code /export session continuation transcripts
+[0-9][0-9][0-9][0-9]-*-this-session-is-being-continued-from-a-previous-c*.txt
