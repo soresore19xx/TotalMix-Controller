@@ -14,6 +14,8 @@
     button { background: #3a3a3a; color: #ddd; border: 1px solid #555; border-radius: 4px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
     button:hover { background: #4a4a4a; }
     #devScanStatus { font-size: 11px; color: #888; margin-left: 6px; }
+    #scanStatus { font-size: 11px; color: #888; margin-left: 6px; }
+    #scanResult { display: none; margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -48,6 +50,19 @@
     <input type="number" id="channel" class="short" min="1" max="24" value="1">
   </div>
   <div class="hint">Hardware Input channel number (1–24, left to right)</div>
+  <div class="row">
+    <label></label>
+    <button onclick="startScan()">Scan Channels</button>
+    <span id="scanStatus"></span>
+  </div>
+  <div id="scanResult">
+    <div class="row">
+      <label>Select</label>
+      <select id="scanSelect" onchange="applyChannel()">
+        <option value="">-- pick channel --</option>
+      </select>
+    </div>
+  </div>
   <hr>
   <div class="section">Label</div>
   <div class="row">
@@ -100,6 +115,9 @@
       if (msg.event === 'sendToPropertyInspector' && msg.payload && msg.payload.action === 'scanDevicesResult') {
         handleDeviceScanResult(msg.payload.devices || []);
       }
+      if (msg.event === 'sendToPropertyInspector' && msg.payload && msg.payload.action === 'scanResult') {
+        handleScanResult(msg.payload);
+      }
     };
   }
 
@@ -114,6 +132,53 @@
   function startDeviceScan() {
     document.getElementById('devScanStatus').textContent = 'Scanning...';
     websocket.send(JSON.stringify({ event: 'sendToPlugin', context: uuid, payload: { action: 'scanDevices' } }));
+  }
+
+  function startScan() {
+    document.getElementById('scanStatus').textContent = 'Scanning...';
+    document.getElementById('scanResult').style.display = 'none';
+    websocket.send(JSON.stringify({
+      event: 'sendToPlugin', context: uuid,
+      payload: {
+        action:   'scan',
+        host:     document.getElementById('host').value.trim() || '127.0.0.1',
+        sendPort: parseInt(document.getElementById('sendPort').value) || 7001,
+        recvPort: parseInt(document.getElementById('recvPort').value) || 9001
+      }
+    }));
+  }
+
+  function handleScanResult(payload) {
+    document.getElementById('scanStatus').textContent = '';
+    if (payload.error) {
+      document.getElementById('scanStatus').textContent = 'Error: ' + payload.error;
+      return;
+    }
+    var result = payload.result || {};
+    var sel = document.getElementById('scanSelect');
+    sel.innerHTML = '<option value="">-- pick channel --</option>';
+    // Phantom (+48V) only applies to the Hardware Input bus — Mic preamp
+    // power. Playback / Output have no phantom concept, so even though
+    // scanner.ts returns all 3 buses we deliberately surface only Input
+    // here to avoid offering meaningless choices.
+    var chs = result.Input || [];
+    chs.forEach(function(ch) {
+      var opt = document.createElement('option');
+      opt.value = ch.index;
+      opt.textContent = 'ch ' + ch.index + ': ' + ch.name;
+      sel.appendChild(opt);
+    });
+    document.getElementById('scanResult').style.display = '';
+    if (!chs.length) {
+      document.getElementById('scanStatus').textContent = 'No Input channels found';
+    }
+  }
+
+  function applyChannel() {
+    var val = document.getElementById('scanSelect').value;
+    if (!val) return;
+    document.getElementById('channel').value = val;
+    save();
   }
 
   function handleDeviceScanResult(devices) {

@@ -49,11 +49,16 @@ The encoder LCD (Stream Deck+) is fully customizable per action.
 
 ```
 ┌──────────────────────────────────────────┐
-│  Title (90px)    │  Value (110px)        │  ← top 51px
+│  Title (200px)                           │  ← 20px
 ├──────────────────────────────────────────┤
-│  Gauge (200px, segmented bar)            │  ← bottom 47px
+│  Value text (+6 dB / CTR / …)           │
+│  ──── tick marks 0/25/50/75/100 % ───── │  ← 78px
+│  ████ segmented bar ░░░░░░░░░░░░░░░░░   │
+│                  ▼ pointer               │
 └──────────────────────────────────────────┘
 ```
+
+The title strip (top 20 px) shows the customizable text label. The gauge area (bottom 78 px) renders, from top to bottom: the current value text, tick marks, the 20-segment bar, and a pointer triangle — all within a single SVG image.
 
 ### LCD Settings (Property Inspector)
 
@@ -68,22 +73,15 @@ The encoder LCD (Stream Deck+) is fully customizable per action.
 | Gauge | Fill | Filled bar color |
 | Gauge | Background | Unfilled bar color |
 
-**透過 (Transparent) checkbox**: When checked, `lcdBg` is set to `transparent`; all three LCD elements (title, value, gauge) render without background, revealing whatever background image is set in the Stream Deck software. When unchecked, the solid Background color is applied across the full LCD area.
-
-### Value Display
-
-| Action | Value format |
-|---|---|
-| Channel Volume Dial | `+6 dB` / `0 dB` / `-∞ dB` / `[MUTED]` |
-| Channel Pan Dial | `CTR` / `L64` / `R64` |
+**透過 (Transparent) checkbox**: When checked, `lcdBg` is set to `transparent`; both LCD elements (title strip and gauge) render without background, revealing whatever background image is set in the Stream Deck software. When unchecked, the solid Background color is applied across the full LCD area.
 
 ### Gauge
 
 - Segmented bar with 20 divisions (semi-transparent overlay dividers)
 - Tick marks at 0 / 25 / 50 / 75 / 100 %
 - Pointer triangle tracking current value
-- Volume dial: fills left → right
-- Pan dial: fills from center outward (L/R)
+- Volume dial: fills left → right; value text shows dB (`+6 dB`, `0 dB`, `-∞ dB`, or `[MUTED]`)
+- Pan dial: fills from center outward (L/R); value text shows pan position (`CTR`, `L64`, `R64`)
 
 ## OSC Address Reference
 
@@ -118,7 +116,7 @@ Key OSC addresses used (from [`OscTableTotalMix_240722.xls`](https://www.rme-aud
 - **Stream Deck software 6.6+** (tested on 7.4)
 - [RME TotalMix FX](https://www.rme-audio.de/totalmix-fx.html) 1.99+ with OSC enabled; tested on **RME Digiface USB**
 - TotalMix Remote (iOS/Android/standalone) is also supported as an OSC target
-- macOS 13 (Ventura) or later recommended
+- macOS 10.15 (Catalina) or later (macOS 13 Ventura or later recommended)
 
 ## Setup
 
@@ -142,6 +140,8 @@ In TotalMix FX: **Mixer Settings → OSC tab**
 | Recv Port | Must match TotalMix FX **outgoing** port |
 
 The plugin supports **remote TotalMix FX** over the network — just set Host IP to the remote machine's IP address.
+
+Channel actions (Mute, Solo, Volume, Pan, Phantom) include a **Scan Channels** button in the Property Inspector. Clicking it queries TotalMix FX via OSC and populates a dropdown with channel names (up to 24 per bus) so you can select a channel by name instead of typing its index manually.
 
 ## Installation
 

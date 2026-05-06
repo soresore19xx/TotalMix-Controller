@@ -9417,7 +9417,18 @@ let ChannelPhantom = (() => {
             sendOsc(host, sendPort, `/1/phantom/1/${channel}`, next ? 1.0 : 0.0);
         }
         async onSendToPlugin(ev) {
-            if (ev.payload['action'] === 'scanDevices') {
+            const act = ev.payload['action'];
+            if (act === 'scan') {
+                const { host, sendPort, recvPort } = conn$5(ev.payload);
+                try {
+                    const result = await scanDevices(host, sendPort, recvPort);
+                    await streamDeck.ui.sendToPropertyInspector({ action: 'scanResult', result });
+                }
+                catch (e) {
+                    await streamDeck.ui.sendToPropertyInspector({ action: 'scanResult', error: String(e) });
+                }
+            }
+            else if (act === 'scanDevices') {
                 const devices = await scanRmeDevices();
                 await streamDeck.ui.sendToPropertyInspector({ action: 'scanDevicesResult', devices });
             }

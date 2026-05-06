@@ -1,7 +1,7 @@
 import { action, streamDeck, KeyDownEvent, KeyAction, SingletonAction, WillAppearEvent, WillDisappearEvent, DidReceiveSettingsEvent, SendToPluginEvent } from "@elgato/streamdeck";
 import type { JsonObject } from "@elgato/utils";
 import { sendOsc, onOsc, offOsc, type OscHandler } from "../oscService";
-import { scanRmeDevices } from "../scanner";
+import { scanDevices, scanRmeDevices } from "../scanner";
 import { applyLabel } from "../label";
 
 type Settings = { host?: string; sendPort?: number; recvPort?: number; channel?: number; label?: string; labelFont?: string; labelSize?: number };
@@ -48,7 +48,16 @@ export class ChannelPhantom extends SingletonAction<Settings> {
   }
 
   override async onSendToPlugin(ev: SendToPluginEvent<JsonObject, Settings>): Promise<void> {
-    if (ev.payload['action'] === 'scanDevices') {
+    const act = ev.payload['action'];
+    if (act === 'scan') {
+      const { host, sendPort, recvPort } = conn(ev.payload as unknown as Settings);
+      try {
+        const result = await scanDevices(host, sendPort, recvPort);
+        await streamDeck.ui.sendToPropertyInspector({ action: 'scanResult', result });
+      } catch (e) {
+        await streamDeck.ui.sendToPropertyInspector({ action: 'scanResult', error: String(e) });
+      }
+    } else if (act === 'scanDevices') {
       const devices = await scanRmeDevices();
       await streamDeck.ui.sendToPropertyInspector({ action: 'scanDevicesResult', devices });
     }
