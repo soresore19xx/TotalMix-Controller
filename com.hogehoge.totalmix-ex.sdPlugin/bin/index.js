@@ -7868,7 +7868,7 @@ class DeviceService extends ReadOnlyDeviceStore {
         super();
         // Add the devices from registration parameters.
         connection.once("connected", (info) => {
-            (info.devices ?? []).forEach((dev) => deviceStore.set(new Device(dev.id, dev, false)));
+            info.devices.forEach((dev) => deviceStore.set(new Device(dev.id, dev, false)));
         });
         // Add new devices that were connected.
         connection.on("deviceDidConnect", ({ device: id, deviceInfo }) => {
@@ -9954,10 +9954,28 @@ const PID_FILE = '/tmp/totalmix-ex.pid';
     }
     catch { /* no pid file yet */ }
     fs$1.writeFileSync(PID_FILE, String(process.pid));
-    process.on('exit', () => { try {
-        fs$1.unlinkSync(PID_FILE);
+    // Touch/unlink only while the file still holds our PID, so a successor's PID is never clobbered.
+    const owns = () => { try {
+        return fs$1.readFileSync(PID_FILE, 'utf8').trim() === String(process.pid);
     }
-    catch { } });
+    catch {
+        return false;
+    } };
+    // macOS tmp_cleaner deletes /tmp files untouched for 3 days; without the file the next start
+    // cannot stop this instance and two run side by side. Refresh mtime hourly.
+    setInterval(() => { if (owns()) {
+        const t = new Date();
+        try {
+            fs$1.utimesSync(PID_FILE, t, t);
+        }
+        catch { }
+    } }, 3_600_000).unref();
+    process.on('exit', () => { if (owns()) {
+        try {
+            fs$1.unlinkSync(PID_FILE);
+        }
+        catch { }
+    } });
 })();
 streamDeck.actions.registerAction(new GlobalMute());
 streamDeck.actions.registerAction(new GlobalSolo());

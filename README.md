@@ -203,7 +203,7 @@ This generates `com.hogehoge.totalmix-ex.streamDeckPlugin` which can be attached
 ## Implementation Notes
 
 - **EPIPE guard**: `stdout`/`stderr` EPIPE errors are absorbed to prevent crash loops when Stream Deck restarts the plugin process.
-- **Single-instance guard**: A PID file (`/tmp/totalmix-ex.pid`) terminates any previous instance on startup to prevent zombie processes.
+- **Single-instance guard**: A PID file (`/tmp/totalmix-ex.pid`) terminates any previous instance on startup to prevent zombie processes. The running instance refreshes the file's mtime hourly, because macOS `tmp_cleaner` deletes `/tmp` files untouched for 3 days and a missing file lets a stale instance survive the next start. The refresh and the unlink on exit only happen while the file still holds the instance's own PID.
 - **Mute/Solo arm-disarm**: TotalMix FX mute/solo is not a simple toggle — the plugin tracks state locally and sends explicit `1.0` (arm) or `0.0` (disarm).
 - **Bus tracking**: Channel actions call `ensureBus()` before sending to switch to the correct bus view automatically.
 - **Dial debounce**: OSC feedback is ignored for 300 ms after a dial operation to prevent display bounce.
