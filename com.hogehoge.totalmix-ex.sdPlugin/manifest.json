@@ -304,11 +304,11 @@
     }
   ],
   "Software": {
-    "MinimumVersion": "6.6"
+    "MinimumVersion": "7.1"
   },
   "SDKVersion": 2,
   "Nodejs": {
-    "Version": "20",
+    "Version": "24",
     "Debug": "enabled"
   }
 }

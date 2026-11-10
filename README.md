@@ -154,7 +154,7 @@ Channel actions (Mute, Solo, Volume, Pan, Phantom) include a **Scan Channels** b
 
 **Prerequisites**
 
-- [Node.js](https://nodejs.org/) 20+
+- [Node.js](https://nodejs.org/) 22+ (for building; the plugin itself runs on Stream Deck's bundled Node.js 24, which needs Stream Deck 7.1 or later)
 - [Stream Deck CLI](https://www.npmjs.com/package/@elgato/cli): `npm install -g @elgato/cli`
 
 **Steps**
